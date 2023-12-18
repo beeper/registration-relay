@@ -61,6 +61,7 @@ type provider struct {
 	registered bool
 	ws         *websocket.Conn
 	resultsCh  chan json.RawMessage
+	reqID      int
 }
 
 func NewProvider(ws *websocket.Conn) *provider {
@@ -72,6 +73,7 @@ func NewProvider(ws *websocket.Conn) *provider {
 		log:       logger,
 		ws:        ws,
 		resultsCh: make(chan json.RawMessage),
+		reqID:     1,
 	}
 }
 
@@ -85,7 +87,7 @@ func (p *provider) WebsocketLoop() {
 			break
 		}
 
-		var rawCommand rawCommand
+		var rawCommand RawCommand[json.RawMessage]
 		if err := json.Unmarshal(message, &rawCommand); err != nil {
 			p.log.Err(err).Msg("Failed to decode websocket message")
 			break
@@ -106,7 +108,7 @@ func (p *provider) WebsocketLoop() {
 
 			// Send back register response before setting the flag (ws is single writer)
 			response := registerCommandData{registerCode}
-			buf, err := json.Marshal(response)
+			buf, err := json.Marshal(RawCommand[registerCommandData]{Command: "response", Data: response, ReqID: rawCommand.ReqID})
 			if err != nil {
 				p.log.Err(err).Msg("Failed to encode register response")
 				break
@@ -116,13 +118,15 @@ func (p *provider) WebsocketLoop() {
 			// Set registered flag, enabling commands from bridge to come in
 			p.registered = true
 			continue
-		}
-
-		// Otherwise pass to the results channel, we're expecting a listener
-		select {
-		case p.resultsCh <- rawCommand.Data:
-		default:
-			p.log.Warn().Msg("Failed to send response, no request waiter!")
+		} else if rawCommand.Command == "response" {
+			// Otherwise pass to the results channel, we're expecting a listener
+			select {
+			case p.resultsCh <- rawCommand.Data:
+			default:
+				p.log.Warn().Msg("Failed to send response, no request waiter!")
+			}
+		} else {
+			p.log.Warn().Str("command", rawCommand.Command).Msg("Received unknown command")
 		}
 	}
 
@@ -140,7 +144,9 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 	p.cmdLock.Lock()
 	defer p.cmdLock.Unlock()
 
-	cmd := rawCommand{Command: command}
+	p.reqID++
+
+	cmd := RawCommand[json.RawMessage]{Command: command, ReqID: p.reqID}
 	buf, err := json.Marshal(cmd)
 	if err != nil {
 		return nil, err

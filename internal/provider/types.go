@@ -1,10 +1,9 @@
 package provider
 
-import "encoding/json"
-
-type rawCommand struct {
-	Command string          `json:"command"`
-	Data    json.RawMessage `json:"data"`
+type RawCommand[T any] struct {
+	Command string `json:"command"`
+	ReqID   int    `json:"id"`
+	Data    T      `json:"data"`
 }
 
 type registerCommandData struct {
