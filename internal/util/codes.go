@@ -5,7 +5,7 @@ import (
 	"math/big"
 )
 
-const codeLetters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const codeLetters = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 func generateRandomBytes(n int) ([]byte, error) {
 	max := big.NewInt(int64(len(codeLetters)))
