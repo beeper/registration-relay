@@ -12,15 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: validation-relay
-      - uses: actions/checkout@v3
-        with:
-          repository: beeper/imessage
-          path: imessage
-          token: ${{ secrets.GH_BEEPER_IMESSAGE_PAT }}
-      - name: Set up Go ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v4
+      - uses: actions/setup-go@v4
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -32,14 +24,12 @@ jobs:
           python -m pip install pre-commit
       - name: Run pre-commit
         run: |
-          cd validation-relay && pre-commit run --all-files
+          pre-commit run --all-files
 
   build-docker:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          path: validation-relay
       - uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v2
         with:
@@ -51,7 +41,6 @@ jobs:
           context: .
           cache-from: ${{ env.CI_REGISTRY_IMAGE }}:latest
           pull: true
-          file: validation-relay/Dockerfile
           tags: ${{ env.CI_REGISTRY_IMAGE }}:${{ github.sha }}
           push: true
 
