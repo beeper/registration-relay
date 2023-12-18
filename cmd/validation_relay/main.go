@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/beeper/libserv/pkg/flagenv"
+
 	"github.com/beeper/validation-relay/internal/api"
 	"github.com/beeper/validation-relay/internal/config"
 )

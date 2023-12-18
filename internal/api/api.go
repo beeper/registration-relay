@@ -13,6 +13,7 @@ import (
 
 	"github.com/beeper/libserv/pkg/health"
 	"github.com/beeper/libserv/pkg/requestlog"
+
 	"github.com/beeper/validation-relay/internal/config"
 )
 

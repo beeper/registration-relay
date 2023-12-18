@@ -10,8 +10,6 @@ import (
 	"github.com/beeper/validation-relay/internal/provider"
 )
 
-const httpStatusClientClosedConnection = 499
-
 var upgrader = websocket.Upgrader{}
 
 func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
