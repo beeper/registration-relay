@@ -24,9 +24,9 @@ func generateRandomBytes(n int) ([]byte, error) {
 }
 
 func GenerateProviderCode() (string, error) {
-	randBytes, err := generateRandomBytes(9)
+	randBytes, err := generateRandomBytes(16)
 	if err != nil {
 		return "", err
 	}
-	return string(randBytes[:3]) + "-" + string(randBytes[3:6]) + "-" + string(randBytes[6:9]), nil
+	return string(randBytes[:4]) + "-" + string(randBytes[4:8]) + "-" + string(randBytes[8:12]) + "-" + string(randBytes[12:16]), nil
 }
