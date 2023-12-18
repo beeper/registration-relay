@@ -1,6 +1,6 @@
 module github.com/beeper/validation-relay
 
-go 1.21.4
+go 1.21
 
 require (
 	github.com/beeper/libserv v0.0.0-20231201123829-f6b6f7efe7a7
