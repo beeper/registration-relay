@@ -7,6 +7,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/beeper/validation-relay/internal/util"
 )
 
 // Map codes -> providers, management
@@ -28,11 +30,20 @@ func GetProvider(key string) (*provider, bool) {
 	return p, exists
 }
 
-func RegisterProvider(key string, provider *provider) string {
+func RegisterProvider(key string, provider *provider) (string, error) {
 	codeToProviderLock.Lock()
 	defer codeToProviderLock.Unlock()
+
+	if key == "" {
+		var err error
+		key, err = util.GenerateProviderCode()
+		if err != nil {
+			return "", err
+		}
+	}
+
 	codeToProvider[key] = provider
-	return key
+	return key, nil
 }
 
 func UnregisterProvider(key string) {
@@ -87,7 +98,11 @@ func (p *provider) WebsocketLoop() {
 				p.log.Err(err).Msg("Failed to decode register request")
 				break
 			}
-			registerCode = RegisterProvider(request.Code, p)
+			registerCode, err = RegisterProvider(request.Code, p)
+			if err != nil {
+				p.log.Err(err).Msg("Failed to register provider")
+				break
+			}
 
 			// Send back register response before setting the flag (ws is single writer)
 			response := registerCommandData{registerCode}
