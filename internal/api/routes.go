@@ -21,6 +21,7 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 
 	provider, exists := provider.GetProvider(providerCode)
 	if !exists {
+		a.log.Warn().Str("provider_code", providerCode).Msg("No provider found for code")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
