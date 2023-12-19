@@ -93,8 +93,9 @@ func (p *provider) WebsocketLoop() {
 			break
 		}
 
-		// Intercept and handle register command here
-		if rawCommand.Command == "register" {
+		switch rawCommand.Command {
+		case "register":
+			// Intercept and handle register command here
 			var request registerCommandData
 			if err := json.Unmarshal(rawCommand.Data, &request); err != nil {
 				p.log.Err(err).Msg("Failed to decode register request")
@@ -117,15 +118,21 @@ func (p *provider) WebsocketLoop() {
 
 			// Set registered flag, enabling commands from bridge to come in
 			p.registered = true
-			continue
-		} else if rawCommand.Command == "response" {
+		case "ping":
+			buf, err := json.Marshal(RawCommand[struct{}]{Command: "pong", ReqID: rawCommand.ReqID})
+			if err != nil {
+				p.log.Err(err).Msg("Failed to encode ping response")
+				break
+			}
+			p.ws.WriteMessage(websocket.TextMessage, buf)
+		case "response":
 			// Otherwise pass to the results channel, we're expecting a listener
 			select {
 			case p.resultsCh <- rawCommand.Data:
 			default:
 				p.log.Warn().Msg("Failed to send response, no request waiter!")
 			}
-		} else {
+		default:
 			p.log.Warn().Str("command", rawCommand.Command).Msg("Received unknown command")
 		}
 	}
