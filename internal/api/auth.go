@@ -19,7 +19,7 @@ func (a *api) requireAuthHandler(
 	next http.HandlerFunc,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		authToken := r.Header.Get("Authorization")
+		authToken := r.Header.Get("X-Beeper-Access-Token")
 
 		if authToken == "" {
 			a.log.Warn().Msg("Request missing auth header")
