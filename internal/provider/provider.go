@@ -117,6 +117,7 @@ func (p *provider) WebsocketLoop() {
 				p.log.Err(err).Msg("Failed to register provider")
 				break
 			}
+			p.log.Debug().Msg("Registered provider")
 
 			// Send back register response before setting the flag (ws is single writer)
 			response := registerCommandData{registerCode}
@@ -151,6 +152,7 @@ func (p *provider) WebsocketLoop() {
 	p.log.Info().Msg("Exit provider websocket loop")
 	if registerCode != "" {
 		UnregisterProvider(registerCode)
+		p.log.Debug().Msg("Unregistered provider")
 	}
 }
 
