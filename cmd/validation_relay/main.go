@@ -24,7 +24,7 @@ func main() {
 
 	listenAddr := flag.String(
 		"listen",
-		flagenv.StringEnvWithDefault("BPNS_LISTEN", ":8000"),
+		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_LISTEN", ":8000"),
 		"Listen address",
 	)
 
@@ -43,7 +43,7 @@ func main() {
 	cfg := config.Config{}
 	cfg.API.Listen = *listenAddr
 
-	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("bpns")
+	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("registration-relay starting")
 
 	srv := api.NewAPI(cfg)
 	srv.Start()
