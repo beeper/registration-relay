@@ -10,3 +10,7 @@ type registerCommandData struct {
 	Code   string `json:"code"`
 	Secret string `json:"secret"`
 }
+
+type errorData struct {
+	Error string `json:"error"`
+}

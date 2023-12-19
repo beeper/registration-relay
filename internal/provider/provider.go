@@ -108,6 +108,7 @@ func (p *provider) WebsocketLoop() {
 
 	registerCode := ""
 
+Loop:
 	for {
 		_, message, err := p.ws.ReadMessage()
 		if err != nil {
@@ -127,12 +128,16 @@ func (p *provider) WebsocketLoop() {
 			var request registerCommandData
 			if err := json.Unmarshal(rawCommand.Data, &request); err != nil {
 				p.log.Err(err).Msg("Failed to decode register request")
-				break
+				break Loop
 			}
 			response, err := RegisterProvider(request, p)
 			if err != nil {
 				p.log.Err(err).Msg("Failed to register provider")
-				break
+				buf, err := json.Marshal(RawCommand[errorData]{Command: "response", Data: errorData{"invalid token"}, ReqID: rawCommand.ReqID})
+				if err == nil {
+					p.ws.WriteMessage(websocket.TextMessage, buf)
+				}
+				break Loop
 			}
 			p.log.Debug().Msg("Registered provider")
 
@@ -140,7 +145,7 @@ func (p *provider) WebsocketLoop() {
 			buf, err := json.Marshal(RawCommand[registerCommandData]{Command: "response", Data: *response, ReqID: rawCommand.ReqID})
 			if err != nil {
 				p.log.Err(err).Msg("Failed to encode register response")
-				break
+				break Loop
 			}
 			p.ws.WriteMessage(websocket.TextMessage, buf)
 
@@ -150,7 +155,7 @@ func (p *provider) WebsocketLoop() {
 			buf, err := json.Marshal(RawCommand[struct{}]{Command: "pong", ReqID: rawCommand.ReqID})
 			if err != nil {
 				p.log.Err(err).Msg("Failed to encode ping response")
-				break
+				break Loop
 			}
 			p.ws.WriteMessage(websocket.TextMessage, buf)
 		case "response":
