@@ -5,7 +5,7 @@
 Local binary:
 
 ```sh
-go build ./cmd/validation_relay
+go build ./cmd/registration_relay
 ```
 
 Docker image:

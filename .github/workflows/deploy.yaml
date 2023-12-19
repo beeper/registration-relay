@@ -5,7 +5,7 @@ on:
 
 env:
   GO_VERSION: "1.21"
-  CI_REGISTRY_IMAGE: "${{ secrets.CI_REGISTRY }}/validation-relay"
+  CI_REGISTRY_IMAGE: "${{ secrets.CI_REGISTRY }}/registration-relay"
 
 jobs:
   lint:

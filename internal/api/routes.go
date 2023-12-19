@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
 
-	"github.com/beeper/validation-relay/internal/provider"
+	"github.com/beeper/registration-relay/internal/provider"
 )
 
 var upgrader = websocket.Upgrader{}

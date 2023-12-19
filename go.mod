@@ -1,4 +1,4 @@
-module github.com/beeper/validation-relay
+module github.com/beeper/registration-relay
 
 go 1.21
 

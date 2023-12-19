@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/beeper/validation-relay/internal/util"
+	"github.com/beeper/registration-relay/internal/util"
 )
 
 // Map codes -> providers, management

@@ -11,8 +11,8 @@ import (
 
 	"github.com/beeper/libserv/pkg/flagenv"
 
-	"github.com/beeper/validation-relay/internal/api"
-	"github.com/beeper/validation-relay/internal/config"
+	"github.com/beeper/registration-relay/internal/api"
+	"github.com/beeper/registration-relay/internal/config"
 )
 
 var Commit,
