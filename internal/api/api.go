@@ -21,6 +21,7 @@ import (
 type api struct {
 	log    zerolog.Logger
 	server *http.Server
+	secret []byte
 }
 
 func NewAPI(cfg config.Config) *api {
@@ -29,7 +30,8 @@ func NewAPI(cfg config.Config) *api {
 		Logger()
 
 	api := api{
-		log: logger,
+		log:    logger,
+		secret: cfg.Secret,
 	}
 
 	r := chi.NewRouter()

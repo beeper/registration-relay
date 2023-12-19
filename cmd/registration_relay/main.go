@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"os"
 	"os/signal"
@@ -28,6 +29,11 @@ func main() {
 		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_LISTEN", ":8000"),
 		"Listen address",
 	)
+	secret := flag.String(
+		"secret",
+		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_SECRET", ""),
+		"Secret (32 bytes encoded as base64)",
+	)
 	metricsListenAddr := flag.String(
 		"metricsListen",
 		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_METRICS_LISTEN", ":5000"),
@@ -48,6 +54,11 @@ func main() {
 
 	cfg := config.Config{}
 	cfg.API.Listen = *listenAddr
+	var err error
+	cfg.Secret, err = base64.StdEncoding.DecodeString(*secret)
+	if err != nil || len(cfg.Secret) != 32 {
+		log.Fatal().Err(err).Int("secret_len", len(cfg.Secret)).Msg("Invalid secret")
+	}
 
 	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("registration-relay starting")
 
