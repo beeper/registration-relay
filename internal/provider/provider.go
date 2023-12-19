@@ -1,7 +1,11 @@
 package provider
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -31,27 +35,37 @@ func GetProvider(code string) (*provider, bool) {
 	return p, exists
 }
 
-func RegisterProvider(code string, provider *provider) (string, error) {
+func calculateSecret(globalSecret []byte, code string) string {
+	h := hmac.New(sha256.New, globalSecret)
+	h.Write([]byte(code))
+	return base64.RawStdEncoding.EncodeToString(h.Sum(nil))
+}
+
+func RegisterProvider(data registerCommandData, provider *provider) (*registerCommandData, error) {
 	codeToProviderLock.Lock()
 	defer codeToProviderLock.Unlock()
 
-	if existing, exists := codeToProvider[code]; exists {
-		existing.log.Warn().
-			Str("code", code).
-			Msg("New provider with same code registering, exiting websocket")
-		existing.ws.Close()
-	}
-
-	if code == "" {
+	if data.Code == "" {
 		var err error
-		code, err = util.GenerateProviderCode()
+		data.Code, err = util.GenerateProviderCode()
 		if err != nil {
-			return "", err
+			return nil, err
+		}
+		data.Secret = calculateSecret(provider.globalSecret, data.Code)
+	} else {
+		if calculateSecret(provider.globalSecret, data.Code) != data.Secret {
+			return nil, fmt.Errorf("invalid secret")
+		}
+		if existing, exists := codeToProvider[data.Code]; exists {
+			existing.log.Warn().
+				Str("code", data.Code).
+				Msg("New provider with same code registering, exiting websocket")
+			existing.ws.Close()
 		}
 	}
 
-	codeToProvider[code] = provider
-	return code, nil
+	codeToProvider[data.Code] = provider
+	return &data, nil
 }
 
 func UnregisterProvider(key string) {
@@ -70,18 +84,21 @@ type provider struct {
 	ws         *websocket.Conn
 	resultsCh  chan json.RawMessage
 	reqID      int
+
+	globalSecret []byte
 }
 
-func NewProvider(ws *websocket.Conn) *provider {
+func NewProvider(ws *websocket.Conn, secret []byte) *provider {
 	logger := log.With().
 		Str("component", "provider").
 		Logger()
 
 	return &provider{
-		log:       logger,
-		ws:        ws,
-		resultsCh: make(chan json.RawMessage),
-		reqID:     1,
+		log:          logger,
+		ws:           ws,
+		resultsCh:    make(chan json.RawMessage),
+		reqID:        1,
+		globalSecret: secret,
 	}
 }
 
@@ -91,6 +108,7 @@ func (p *provider) WebsocketLoop() {
 
 	registerCode := ""
 
+Loop:
 	for {
 		_, message, err := p.ws.ReadMessage()
 		if err != nil {
@@ -110,21 +128,24 @@ func (p *provider) WebsocketLoop() {
 			var request registerCommandData
 			if err := json.Unmarshal(rawCommand.Data, &request); err != nil {
 				p.log.Err(err).Msg("Failed to decode register request")
-				break
+				break Loop
 			}
-			registerCode, err = RegisterProvider(request.Code, p)
+			response, err := RegisterProvider(request, p)
 			if err != nil {
 				p.log.Err(err).Msg("Failed to register provider")
-				break
+				buf, err := json.Marshal(RawCommand[errorData]{Command: "response", Data: errorData{"invalid token"}, ReqID: rawCommand.ReqID})
+				if err == nil {
+					p.ws.WriteMessage(websocket.TextMessage, buf)
+				}
+				break Loop
 			}
 			p.log.Debug().Msg("Registered provider")
 
 			// Send back register response before setting the flag (ws is single writer)
-			response := registerCommandData{registerCode}
-			buf, err := json.Marshal(RawCommand[registerCommandData]{Command: "response", Data: response, ReqID: rawCommand.ReqID})
+			buf, err := json.Marshal(RawCommand[registerCommandData]{Command: "response", Data: *response, ReqID: rawCommand.ReqID})
 			if err != nil {
 				p.log.Err(err).Msg("Failed to encode register response")
-				break
+				break Loop
 			}
 			p.ws.WriteMessage(websocket.TextMessage, buf)
 
@@ -134,7 +155,7 @@ func (p *provider) WebsocketLoop() {
 			buf, err := json.Marshal(RawCommand[struct{}]{Command: "pong", ReqID: rawCommand.ReqID})
 			if err != nil {
 				p.log.Err(err).Msg("Failed to encode ping response")
-				break
+				break Loop
 			}
 			p.ws.WriteMessage(websocket.TextMessage, buf)
 		case "response":

@@ -47,7 +47,7 @@ func (a *api) providerWebsocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	provider := provider.NewProvider(conn)
+	provider := provider.NewProvider(conn, a.secret)
 	provider.WebsocketLoop()
 
 	a.log.Info().Msg("Websocket connection closed")
