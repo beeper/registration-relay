@@ -34,7 +34,7 @@ func (a *api) requireAuthHandler(
 			return
 		}
 
-		req.Header.Add("Authorization", authToken)
+		req.Header.Add("Authorization", "Bearer "+authToken)
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
