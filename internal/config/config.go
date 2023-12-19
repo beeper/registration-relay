@@ -4,6 +4,7 @@ type Config struct {
 	Version string
 	Secret  []byte
 	API     struct {
-		Listen string
+		Listen          string
+		ValidateAuthURL string
 	}
 }

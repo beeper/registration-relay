@@ -43,7 +43,15 @@ func NewAPI(cfg config.Config) *api {
 	r.Get("/health", health.Health)
 
 	r.Get("/api/v1/provider", api.providerWebsocket)
-	r.Post("/api/v1/bridge/{command}", api.bridgeExecuteCommand)
+
+	commandHandler := api.bridgeExecuteCommand
+	if cfg.API.ValidateAuthURL != "" {
+		commandHandler = api.requireAuthHandler(
+			cfg.API.ValidateAuthURL,
+			commandHandler,
+		)
+	}
+	r.Post("/api/v1/bridge/{command}", commandHandler)
 
 	api.server = &http.Server{Addr: cfg.API.Listen, Handler: r}
 

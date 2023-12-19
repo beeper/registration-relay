@@ -40,6 +40,12 @@ func main() {
 		"Metrics listen address",
 	)
 
+	validateAuthURL := flag.String(
+		"validateAuthURL",
+		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_VALIDATE_AUTH_URL", ""),
+		"Validate auth header URL",
+	)
+
 	flag.Parse()
 
 	if *prettyLogs {
@@ -59,6 +65,7 @@ func main() {
 	if err != nil || len(cfg.Secret) != 32 {
 		log.Fatal().Err(err).Int("secret_len", len(cfg.Secret)).Msg("Invalid secret")
 	}
+	cfg.API.ValidateAuthURL = *validateAuthURL
 
 	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("registration-relay starting")
 
