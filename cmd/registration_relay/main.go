@@ -13,6 +13,7 @@ import (
 
 	"github.com/beeper/registration-relay/internal/api"
 	"github.com/beeper/registration-relay/internal/config"
+	"github.com/beeper/registration-relay/internal/metrics"
 )
 
 var Commit,
@@ -26,6 +27,11 @@ func main() {
 		"listen",
 		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_LISTEN", ":8000"),
 		"Listen address",
+	)
+	metricsListenAddr := flag.String(
+		"metricsListen",
+		flagenv.StringEnvWithDefault("REGISTRATION_RELAY_METRICS_LISTEN", ":5000"),
+		"Metrics listen address",
 	)
 
 	flag.Parse()
@@ -45,6 +51,9 @@ func main() {
 
 	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("registration-relay starting")
 
+	metricsSrv := metrics.NewPrometheusMetricsHandler(*metricsListenAddr)
+	metricsSrv.Start()
+
 	srv := api.NewAPI(cfg)
 	srv.Start()
 
@@ -55,5 +64,6 @@ func main() {
 	log.Info().Msg("Going to stop...")
 
 	srv.Stop()
+	metricsSrv.Stop()
 	os.Exit(0)
 }

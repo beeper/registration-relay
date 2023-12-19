@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/beeper/registration-relay/internal/metrics"
 	"github.com/beeper/registration-relay/internal/util"
 )
 
@@ -85,6 +86,9 @@ func NewProvider(ws *websocket.Conn) *provider {
 }
 
 func (p *provider) WebsocketLoop() {
+	metrics.ProviderWebsockets.Inc()
+	defer metrics.ProviderWebsockets.Dec()
+
 	registerCode := ""
 
 	for {

@@ -15,6 +15,7 @@ import (
 	"github.com/beeper/libserv/pkg/requestlog"
 
 	"github.com/beeper/registration-relay/internal/config"
+	"github.com/beeper/registration-relay/internal/metrics"
 )
 
 type api struct {
@@ -34,7 +35,8 @@ func NewAPI(cfg config.Config) *api {
 	r := chi.NewRouter()
 	r.Use(hlog.NewHandler(api.log))
 	r.Use(hlog.RequestIDHandler("request_id", ""))
-	r.Use(requestlog.AccessLogger(true))
+	r.Use(requestlog.AccessLogger(false))
+	r.Use(metrics.TrackHTTPMetrics) // must be after requestlog.AccessLogger
 
 	r.Get("/health", health.Health)
 
