@@ -23,27 +23,34 @@ func init() {
 	codeToProvider = make(map[string]*provider, 0)
 }
 
-func GetProvider(key string) (*provider, bool) {
+func GetProvider(code string) (*provider, bool) {
 	codeToProviderLock.Lock()
 	defer codeToProviderLock.Unlock()
-	p, exists := codeToProvider[key]
+	p, exists := codeToProvider[code]
 	return p, exists
 }
 
-func RegisterProvider(key string, provider *provider) (string, error) {
+func RegisterProvider(code string, provider *provider) (string, error) {
 	codeToProviderLock.Lock()
 	defer codeToProviderLock.Unlock()
 
-	if key == "" {
+	if existing, exists := codeToProvider[code]; exists {
+		existing.log.Warn().
+			Str("code", code).
+			Msg("New provider with same code registering, exiting websocket")
+		existing.ws.Close()
+	}
+
+	if code == "" {
 		var err error
-		key, err = util.GenerateProviderCode()
+		code, err = util.GenerateProviderCode()
 		if err != nil {
 			return "", err
 		}
 	}
 
-	codeToProvider[key] = provider
-	return key, nil
+	codeToProvider[code] = provider
+	return code, nil
 }
 
 func UnregisterProvider(key string) {
