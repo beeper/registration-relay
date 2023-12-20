@@ -35,10 +35,10 @@ func GetProvider(code string) (*provider, bool) {
 	return p, exists
 }
 
-func calculateSecret(globalSecret []byte, code string) string {
+func calculateSecret(globalSecret []byte, code string) []byte {
 	h := hmac.New(sha256.New, globalSecret)
 	h.Write([]byte(code))
-	return base64.RawStdEncoding.EncodeToString(h.Sum(nil))
+	return h.Sum(nil)
 }
 
 func RegisterProvider(data registerCommandData, provider *provider) (*registerCommandData, error) {
@@ -51,9 +51,13 @@ func RegisterProvider(data registerCommandData, provider *provider) (*registerCo
 		if err != nil {
 			return nil, err
 		}
-		data.Secret = calculateSecret(provider.globalSecret, data.Code)
+		data.Secret = base64.RawStdEncoding.EncodeToString(calculateSecret(provider.globalSecret, data.Code))
 	} else {
-		if calculateSecret(provider.globalSecret, data.Code) != data.Secret {
+		if len(data.Code) != 19 || len(data.Secret) > 64 {
+			return nil, fmt.Errorf("invalid secret")
+		}
+		decodedSecret, err := base64.RawStdEncoding.DecodeString(data.Secret)
+		if err != nil || !hmac.Equal(calculateSecret(provider.globalSecret, data.Code), decodedSecret) {
 			return nil, fmt.Errorf("invalid secret")
 		}
 		if existing, exists := codeToProvider[data.Code]; exists {
