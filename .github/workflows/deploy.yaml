@@ -6,6 +6,8 @@ on:
 env:
   GO_VERSION: "1.21"
   CI_REGISTRY_IMAGE: "${{ secrets.CI_REGISTRY }}/registration-relay"
+  GHCR_REGISTRY: ghcr.io
+  GHCR_REGISTRY_IMAGE: "ghcr.io/${{ github.repository }}"
 
 jobs:
   lint:
@@ -30,18 +32,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: docker/setup-buildx-action@v2
-      - uses: docker/login-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Beeper Docker registry
+        uses: docker/login-action@v2
         with:
           registry: ${{ secrets.CI_REGISTRY }}
           username: ${{ secrets.CI_REGISTRY_USER }}
           password: ${{ secrets.CI_REGISTRY_PASSWORD }}
+
+      - name: Login to ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: docker/build-push-action@v2
         with:
           context: .
           cache-from: ${{ env.CI_REGISTRY_IMAGE }}:latest
           pull: true
-          tags: ${{ env.CI_REGISTRY_IMAGE }}:${{ github.sha }}
+          tags: |
+            ${{ env.CI_REGISTRY_IMAGE }}:${{ github.sha }}
+            ${{ env.GHCR_REGISTRY_IMAGE }}:${{ github.sha }}
           push: true
 
   deploy-docker:
@@ -50,11 +66,24 @@ jobs:
     needs:
       - build-docker
     steps:
-      - uses: docker/login-action@v2
+      - name: Login to Beeper Docker registry
+        uses: docker/login-action@v2
         with:
           registry: ${{ secrets.CI_REGISTRY }}
           username: ${{ secrets.CI_REGISTRY_USER }}
           password: ${{ secrets.CI_REGISTRY_PASSWORD }}
+
+      - name: Login to ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: beeper/docker-retag-push-latest@main
         with:
           image: ${{ env.CI_REGISTRY_IMAGE }}
+
+      - uses: beeper/docker-retag-push-latest@main
+        with:
+          image: ${{ env.GHCR_REGISTRY_IMAGE }}
