@@ -208,10 +208,17 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 	}
 
 	// Send over our command and listen for the result
+	p.log.Debug().
+		Int("req_id", p.reqID).
+		Str("command", command).
+		Msg("Send request")
 	go p.ws.WriteMessage(websocket.TextMessage, buf)
 
 	select {
 	case result := <-p.resultsCh:
+		p.log.Debug().
+			Int("req_id", p.reqID).
+			Msg("Received response")
 		return result, nil
 	case <-time.After(providerRequestTimeout):
 		// If the request times out shoot the underlying websocket connection to force a reconnect
