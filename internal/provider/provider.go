@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog"
@@ -18,6 +20,8 @@ import (
 
 // Map codes -> providers, management
 //
+
+const providerRequestTimeout = 60 * time.Second
 
 var (
 	codeToProvider     map[string]*provider
@@ -205,7 +209,13 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 
 	// Send over our command and listen for the result
 	go p.ws.WriteMessage(websocket.TextMessage, buf)
-	result := <-p.resultsCh
 
-	return result, nil
+	select {
+	case result := <-p.resultsCh:
+		return result, nil
+	case <-time.After(providerRequestTimeout):
+		// If the request times out shoot the underlying websocket connection to force a reconnect
+		p.ws.Close()
+		return nil, errors.New("request timed out")
+	}
 }
