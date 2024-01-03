@@ -152,6 +152,9 @@ Loop:
 				}
 				break Loop
 			}
+			// Make sure we unregister at the end of the loop
+			registerCode = response.Code
+
 			p.log = p.log.With().Str("code", request.Code).Logger()
 			p.log.Debug().Msg("Registered provider")
 
