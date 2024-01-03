@@ -148,6 +148,7 @@ Loop:
 				}
 				break Loop
 			}
+			p.log = p.log.With().Str("code", request.Code).Logger()
 			p.log.Debug().Msg("Registered provider")
 
 			// Send back register response before setting the flag (ws is single writer)
