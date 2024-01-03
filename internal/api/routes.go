@@ -13,15 +13,17 @@ import (
 var upgrader = websocket.Upgrader{}
 
 func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
-	providerCode, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	code, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if !ok {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	provider, exists := provider.GetProvider(providerCode)
+	log := a.log.With().Str("code", code).Logger()
+
+	provider, exists := provider.GetProvider(code)
 	if !exists {
-		a.log.Warn().Str("provider_code", providerCode).Msg("No provider found for code")
+		log.Warn().Msg("No provider found for code")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -30,6 +32,7 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := provider.ExecuteCommand(command)
 	if err != nil {
+		log.Err(err).Msg("Failed to execute command")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
