@@ -207,7 +207,5 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 	go p.ws.WriteMessage(websocket.TextMessage, buf)
 	result := <-p.resultsCh
 
-	p.log.Info().Bytes("TEST", result).Msg("")
-
 	return result, nil
 }
