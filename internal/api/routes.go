@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/hlog"
 
 	"github.com/beeper/registration-relay/internal/provider"
 )
@@ -19,7 +20,7 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log := a.log.With().Str("code", code).Logger()
+	log := hlog.FromRequest(r).With().Str("code", code).Logger()
 
 	provider, exists := provider.GetProvider(code)
 	if !exists {
@@ -42,9 +43,11 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *api) providerWebsocket(w http.ResponseWriter, r *http.Request) {
+	log := hlog.FromRequest(r)
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		a.log.Err(err).Msg("Failed to upgrade websocket connection")
+		log.Err(err).Msg("Failed to upgrade websocket connection")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -53,5 +56,5 @@ func (a *api) providerWebsocket(w http.ResponseWriter, r *http.Request) {
 	provider := provider.NewProvider(conn, a.secret)
 	provider.WebsocketLoop()
 
-	a.log.Info().Msg("Websocket connection closed")
+	log.Info().Msg("Websocket connection closed")
 }
