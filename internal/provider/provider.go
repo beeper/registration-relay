@@ -72,10 +72,15 @@ func RegisterProvider(data registerCommandData, provider *provider) (*registerCo
 	return &data, nil
 }
 
-func UnregisterProvider(key string) {
+func UnregisterProvider(key string, provider *provider) {
 	codeToProviderLock.Lock()
 	defer codeToProviderLock.Unlock()
-	delete(codeToProvider, key)
+
+	// Only delete the provider if it's the one we're trying to unregister. If we force kick a provider
+	// due to code conflict the map key has already been overwritten.
+	if existing, exists := codeToProvider[key]; exists && existing == provider {
+		delete(codeToProvider, key)
+	}
 }
 
 // Actual provider implementation
@@ -176,7 +181,7 @@ Loop:
 
 	p.log.Info().Msg("Exit provider websocket loop")
 	if registerCode != "" {
-		UnregisterProvider(registerCode)
+		UnregisterProvider(registerCode, p)
 		p.log.Debug().Msg("Unregistered provider")
 	}
 }
