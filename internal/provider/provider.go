@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/beeper/registration-relay/internal/analytics"
 	"sync"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/beeper/registration-relay/internal/analytics"
 	"github.com/beeper/registration-relay/internal/metrics"
 	"github.com/beeper/registration-relay/internal/util"
 )
