@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/beeper/registration-relay/internal/analytics"
 	"sync"
 	"time"
 
@@ -56,6 +57,11 @@ func RegisterProvider(data registerCommandData, provider *provider) (*registerCo
 			return nil, err
 		}
 		data.Secret = base64.RawStdEncoding.EncodeToString(calculateSecret(provider.globalSecret, data.Code))
+
+		analytics.Track(data.Code, "Provider Registered", map[string]any{
+			"commit":           data.Commit,
+			"hardware_version": data.Versions.HardwareVersion,
+		})
 	} else {
 		if len(data.Code) != 19 || len(data.Secret) > 64 {
 			return nil, fmt.Errorf("invalid secret")
@@ -67,9 +73,14 @@ func RegisterProvider(data registerCommandData, provider *provider) (*registerCo
 		if existing, exists := codeToProvider[data.Code]; exists {
 			existing.log.Warn().
 				Str("code", data.Code).
-				Msg("New provider with same code registering, exiting websocket")
+				Msg("New provider with same code registering, exiting existing websocket")
 			existing.ws.Close()
 		}
+
+		analytics.Track(data.Code, "Provider Reconnected", map[string]any{
+			"commit":           data.Commit,
+			"hardware_version": data.Versions.HardwareVersion,
+		})
 	}
 
 	codeToProvider[data.Code] = provider
@@ -156,7 +167,10 @@ Loop:
 			registerCode = response.Code
 
 			p.log = p.log.With().Str("code", request.Code).Logger()
-			p.log.Debug().Msg("Registered provider")
+			p.log.Debug().
+				Str("hardware_version", request.Versions.HardwareVersion).
+				Str("commit", request.Commit).
+				Msg("Registered provider")
 
 			// Send back register response before setting the flag (ws is single writer)
 			buf, err := json.Marshal(RawCommand[registerCommandData]{Command: "response", Data: *response, ReqID: rawCommand.ReqID})
