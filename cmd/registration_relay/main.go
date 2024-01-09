@@ -12,6 +12,7 @@ import (
 
 	"github.com/beeper/libserv/pkg/flagenv"
 
+	"github.com/beeper/registration-relay/internal/analytics"
 	"github.com/beeper/registration-relay/internal/api"
 	"github.com/beeper/registration-relay/internal/config"
 	"github.com/beeper/registration-relay/internal/metrics"
@@ -46,6 +47,17 @@ func main() {
 		"Validate auth header URL",
 	)
 
+	analyticsURL := flag.String(
+		"analyticsURL",
+		flagenv.StringEnvWithDefault("ANALYTICS_URL", ""),
+		"URL to send analytics to, disabled by default",
+	)
+	analyticsToken := flag.String(
+		"analyticsToken",
+		flagenv.StringEnvWithDefault("ANALYTICS_TOKEN", ""),
+		"Write key to auth analytics with, disabled by default",
+	)
+
 	flag.Parse()
 
 	if *prettyLogs {
@@ -66,6 +78,9 @@ func main() {
 		log.Fatal().Err(err).Int("secret_len", len(cfg.Secret)).Msg("Invalid secret")
 	}
 	cfg.API.ValidateAuthURL = *validateAuthURL
+
+	analytics.ConfigURL = *analyticsURL
+	analytics.ConfigToken = *analyticsToken
 
 	log.Info().Str("commit", Commit).Str("build_time", BuildTime).Msg("registration-relay starting")
 
