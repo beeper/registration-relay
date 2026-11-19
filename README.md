@@ -16,3 +16,29 @@ then just run it with some environment variables for configuration.
 
 A reverse proxy configured to allow websockets should be pointed at the RELAY_LISTEN port to enable TLS.
 The bridge and registration providers can then be pointed at the public address of the reverse proxy.
+
+For example, if using `nginx`, the following configuration can be used:
+
+```nginx
+location /health {
+       proxy_pass http://127.0.0.1:8000;
+}
+
+location /api/v1/provider {
+       proxy_pass http://127.0.0.1:8000;
+       # https://www.nginx.com/blog/websocket-nginx/
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection "Upgrade";
+       proxy_set_header Host $host;
+}
+
+location /api/v1/bridge {
+       proxy_pass http://127.0.0.1:8000;
+       # https://www.nginx.com/blog/websocket-nginx/
+       proxy_http_version 1.1;
+       proxy_set_header Upgrade $http_upgrade;
+       proxy_set_header Connection "Upgrade";
+       proxy_set_header Host $host;
+}
+```
