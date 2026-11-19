@@ -25,6 +25,11 @@ import (
 const providerRequestTimeout = 60 * time.Second
 
 var (
+	ErrProviderDisconnected = errors.New("provider disconnected")
+	ErrProviderTimeout      = errors.New("request timed out")
+)
+
+var (
 	codeToProvider     map[string]*provider
 	codeToProviderLock sync.Mutex
 )
@@ -108,6 +113,7 @@ type provider struct {
 	ws         *websocket.Conn
 	resultsCh  chan json.RawMessage
 	reqID      int
+	done       chan struct{}
 
 	globalSecret []byte
 }
@@ -121,6 +127,7 @@ func NewProvider(ws *websocket.Conn, secret []byte) *provider {
 		log:          logger,
 		ws:           ws,
 		resultsCh:    make(chan json.RawMessage),
+		done:         make(chan struct{}),
 		reqID:        1,
 		globalSecret: secret,
 	}
@@ -129,6 +136,7 @@ func NewProvider(ws *websocket.Conn, secret []byte) *provider {
 func (p *provider) WebsocketLoop() {
 	metrics.ProviderWebsockets.Inc()
 	defer metrics.ProviderWebsockets.Dec()
+	defer close(p.done)
 
 	registerCode := ""
 
@@ -216,6 +224,12 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 	p.cmdLock.Lock()
 	defer p.cmdLock.Unlock()
 
+	select {
+	case <-p.done:
+		return nil, ErrProviderDisconnected
+	default:
+	}
+
 	p.reqID++
 
 	cmd := RawCommand[json.RawMessage]{Command: command, ReqID: p.reqID}
@@ -237,9 +251,11 @@ func (p *provider) ExecuteCommand(command string) (json.RawMessage, error) {
 			Int("req_id", p.reqID).
 			Msg("Received response")
 		return result, nil
+	case <-p.done:
+		return nil, ErrProviderDisconnected
 	case <-time.After(providerRequestTimeout):
 		// If the request times out shoot the underlying websocket connection to force a reconnect
 		p.ws.Close()
-		return nil, errors.New("request timed out")
+		return nil, ErrProviderTimeout
 	}
 }
