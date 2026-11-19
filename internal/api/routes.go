@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -22,7 +23,7 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 
 	log := hlog.FromRequest(r).With().Str("code", code).Logger()
 
-	provider, exists := provider.GetProvider(code)
+	p, exists := provider.GetProvider(code)
 	if !exists {
 		log.Warn().Msg("No provider found for code")
 		w.WriteHeader(http.StatusNotFound)
@@ -31,8 +32,16 @@ func (a *api) bridgeExecuteCommand(w http.ResponseWriter, r *http.Request) {
 
 	command := chi.URLParam(r, "command")
 
-	resp, err := provider.ExecuteCommand(command)
-	if err != nil {
+	resp, err := p.ExecuteCommand(command)
+	if errors.Is(err, provider.ErrProviderDisconnected) {
+		log.Warn().Err(err).Msg("Provider disconnected before responding")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if errors.Is(err, provider.ErrProviderTimeout) {
+		log.Err(err).Msg("Failed to execute command")
+		w.WriteHeader(http.StatusGatewayTimeout)
+		return
+	} else if err != nil {
 		log.Err(err).Msg("Failed to execute command")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
